@@ -4,7 +4,7 @@ Description:
     Provides functions readImage and writeImage, which can read
     and write many image formats from/to an RGBA array of values
     to work with.
-Version: 0.1.1
+Version: 0.2.0
 Stability: experimental
 Synopsis: An FFI interface to the DevIL library
 License: BSD3

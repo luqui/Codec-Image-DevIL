@@ -1,7 +1,7 @@
 module Codec.Image.DevIL
-    (ilInit
-    ,readImage,writeImage
-    ,Word8
+    ( ilInit
+    , readImage, writeImage, writeImageFromPtr
+    , Word8
     )
 where
 
@@ -168,5 +168,23 @@ fromArrayRGBA dat = do
                     4 il_RGBA il_UNSIGNED_BYTE
                     (castPtr p)
     return ()
+
+-- | Write an image from a pointer to raw RGBA data.  Careful!  
+-- The size tuple is (rows, columns), not (width, height).
+writeImageFromPtr :: FilePath -> (Int,Int) -> Ptr Word8 -> IO ()
+writeImageFromPtr f (rows,cols) p = do 
+    [outname] <- ilGenImages 1
+    ilBindImage outname
+    fromPtrRGBA (rows,cols) p
+    ilSaveImage f
+    ilDeleteImages [outname]
+
+fromPtrRGBA :: (Int,Int) -> Ptr Word8 -> IO ()
+fromPtrRGBA (rows,cols) p = do
+    ilTexImageC (fromIntegral cols) (fromIntegral rows) 1
+                4 il_RGBA il_UNSIGNED_BYTE
+                (castPtr p)
+    return ()
+
 
 -- vim: ft=haskell :
