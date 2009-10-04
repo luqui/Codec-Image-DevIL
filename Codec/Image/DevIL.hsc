@@ -31,6 +31,7 @@ type ILubyte   = #type ILubyte
 newtype ImageName = ImageName { fromImageName :: ILuint }
 
 
+-- | Initialize the library.
 foreign import CALLTYPE "ilInit" ilInitC :: IO ()
 foreign import CALLTYPE "ilOriginFunc" ilOriginFuncC :: ILenum -> IO ILboolean
 foreign import CALLTYPE "ilEnable" ilEnableC :: ILenum -> IO ILboolean
@@ -42,6 +43,7 @@ ilInit = do
     ilEnableC (#const IL_ORIGIN_SET)
     return ()
 
+-- | Reads an image into an RGBA array.  Indices are (row,column,color-channel).
 readImage :: FilePath -> IO (UArray (Int,Int,Int) Word8)
 readImage x =
   do [inname] <- ilGenImages 1
@@ -51,6 +53,7 @@ readImage x =
      ilDeleteImages [inname]
      return a
 
+-- | Writes an RGBA array to a file.  Indices are (row,column,color-channel).
 writeImage :: FilePath -> UArray (Int,Int,Int) Word8 -> IO ()
 writeImage f a =
   do [outname] <- ilGenImages 1
@@ -135,13 +138,15 @@ il_IMAGE_WIDTH  = (#const IL_IMAGE_WIDTH)  :: ILenum
 -- array indices are (x,y,channel) where channel: 0=Red, 1=Green, 2=Blue, 3=Alpha
 toArrayRGBA :: IO (UArray (Int,Int,Int) Word8)
 toArrayRGBA = do
-    width  <- ilGetIntegerC il_IMAGE_WIDTH
-    height <- ilGetIntegerC il_IMAGE_HEIGHT
-    let bounds = ((0,0,0), (fromIntegral width-1, fromIntegral height-1, 3))
+    -- Arrays are stored in row major, so we have to be fiddly with
+    -- our use of terminology.
+    columns <- ilGetIntegerC il_IMAGE_WIDTH
+    rows <- ilGetIntegerC il_IMAGE_HEIGHT
+    let bounds = ((0,0,0), (fromIntegral rows-1, fromIntegral columns-1, 3))
     ar <- newArray_ bounds
     withStorableArray ar $ \p -> do
         ilCopyPixelsC 0 0 0 
-                      (fromIntegral width) (fromIntegral height) 1 
+                      (fromIntegral columns) (fromIntegral rows) 1 
                       il_RGBA il_UNSIGNED_BYTE 
                       (castPtr p)
     listArray bounds <$> lazyElems ar
@@ -156,10 +161,10 @@ lazyElems ar = do
 -- same as toArrayRGBA
 fromArrayRGBA :: UArray (Int,Int,Int) Word8 -> IO ()
 fromArrayRGBA dat = do
-    let ((0,0,0), (maxx,maxy,3)) = bounds dat
+    let ((0,0,0), (maxrow,maxcol,3)) = bounds dat
     ar <- unsafeThaw dat
     withStorableArray ar $ \p -> do
-        ilTexImageC (fromIntegral maxx+1) (fromIntegral maxy+1) 1
+        ilTexImageC (fromIntegral maxcol+1) (fromIntegral maxrow+1) 1
                     4 il_RGBA il_UNSIGNED_BYTE
                     (castPtr p)
     return ()
