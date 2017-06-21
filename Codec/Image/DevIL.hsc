@@ -13,6 +13,7 @@ import Foreign.C
 
 import Data.Array.Storable
 import Data.Array.Unboxed
+import Data.Array.Unsafe
 import Control.Applicative
 import Control.Monad
 
@@ -151,6 +152,7 @@ toArrayRGBA = do
                       (castPtr p)
     listArray bounds <$> lazyElems ar
 
+lazyElems :: StorableArray (Int, Int, Int) Word8 -> IO [Word8]
 lazyElems ar = do
     ixs <- range <$> getBounds ar
     go ixs
